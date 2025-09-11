@@ -9,7 +9,11 @@ import {
 import { FastifyReply, FastifyRequest } from 'fastify';
 import axios from 'axios';
 import mongoose from 'mongoose';
-import { JsonWebTokenError, TokenExpiredError, NotBeforeError } from 'jsonwebtoken';
+import {
+  JsonWebTokenError,
+  TokenExpiredError,
+  NotBeforeError,
+} from 'jsonwebtoken';
 
 interface ErrorResponse {
   success: false;
@@ -32,10 +36,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
     const request = ctx.getRequest<FastifyRequest>();
-    
+
     const errorInfo = this.formatException(exception);
     const timestamp = new Date().toISOString();
-    
+
     // Enhanced logging with more context
     this.logger.error(
       `❌ [${request.method}] ${request.url} → ${errorInfo.status}`,
@@ -47,7 +51,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         body: this.sanitizeRequestBody(request.body),
         query: request.query,
         timestamp,
-      }
+      },
     );
 
     const errorResponse: ErrorResponse = {
@@ -59,9 +63,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         timestamp,
         path: request.url,
         method: request.method,
-        ...(process.env.NODE_ENV === 'development' && errorInfo.details && {
-          details: errorInfo.details,
-        }),
+        ...(process.env.NODE_ENV === 'development' &&
+          errorInfo.details && {
+            details: errorInfo.details,
+          }),
       },
     };
 
@@ -79,8 +84,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const response = exception.getResponse();
-      const message = typeof response === 'string' ? response : (response as any).message;
-      
+      const message =
+        typeof response === 'string' ? response : (response as any).message;
+
       return {
         status,
         message,
@@ -162,7 +168,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private handleJWTError(exception: any) {
-    if (exception instanceof TokenExpiredError || exception?.name === 'TokenExpiredError') {
+    if (
+      exception instanceof TokenExpiredError ||
+      exception?.name === 'TokenExpiredError'
+    ) {
       return {
         status: HttpStatus.UNAUTHORIZED,
         message: 'Token has expired',
@@ -171,7 +180,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
-    if (exception instanceof NotBeforeError || exception?.name === 'NotBeforeError') {
+    if (
+      exception instanceof NotBeforeError ||
+      exception?.name === 'NotBeforeError'
+    ) {
       return {
         status: HttpStatus.UNAUTHORIZED,
         message: 'Token not active yet',
@@ -193,13 +205,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // Check for standard Mongoose errors
     const standardMongooseErrors = [
       'ValidationError',
-      'CastError', 
+      'CastError',
       'DocumentNotFoundError',
       'VersionError',
       'ParallelSaveError',
       'StrictModeError',
       'OverwriteModelError',
-      'MissingSchemaError'
+      'MissingSchemaError',
     ];
 
     // Check for connection-related errors
@@ -208,7 +220,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       'MongooseServerSelectionError',
       'MongoServerSelectionError',
       'MongoNetworkError',
-      'MongoTimeoutError'
+      'MongoTimeoutError',
     ];
 
     return (
@@ -229,46 +241,55 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private handleMongooseError(exception: any) {
     // Validation Error
-    if (exception instanceof mongoose.Error.ValidationError || exception?.name === 'ValidationError') {
-      const messages = Object.values(exception.errors || {}).map((error: any) => {
-        if (error.kind === 'required') {
-          return `${error.path} is required`;
-        }
-        if (error.kind === 'enum') {
-          return `${error.path} must be one of: ${error.properties?.enumValues?.join(', ')}`;
-        }
-        if (error.kind === 'minlength') {
-          return `${error.path} must be at least ${error.properties?.minlength} characters long`;
-        }
-        if (error.kind === 'maxlength') {
-          return `${error.path} must not exceed ${error.properties?.maxlength} characters`;
-        }
-        if (error.kind === 'min') {
-          return `${error.path} must be at least ${error.properties?.min}`;
-        }
-        if (error.kind === 'max') {
-          return `${error.path} must not exceed ${error.properties?.max}`;
-        }
-        if (error.kind === 'unique') {
-          return `${error.path} must be unique`;
-        }
-        return error.message || `Validation failed for ${error.path}`;
-      });
+    if (
+      exception instanceof mongoose.Error.ValidationError ||
+      exception?.name === 'ValidationError'
+    ) {
+      const messages = Object.values(exception.errors || {}).map(
+        (error: any) => {
+          if (error.kind === 'required') {
+            return `${error.path} is required`;
+          }
+          if (error.kind === 'enum') {
+            return `${error.path} must be one of: ${error.properties?.enumValues?.join(', ')}`;
+          }
+          if (error.kind === 'minlength') {
+            return `${error.path} must be at least ${error.properties?.minlength} characters long`;
+          }
+          if (error.kind === 'maxlength') {
+            return `${error.path} must not exceed ${error.properties?.maxlength} characters`;
+          }
+          if (error.kind === 'min') {
+            return `${error.path} must be at least ${error.properties?.min}`;
+          }
+          if (error.kind === 'max') {
+            return `${error.path} must not exceed ${error.properties?.max}`;
+          }
+          if (error.kind === 'unique') {
+            return `${error.path} must be unique`;
+          }
+          return error.message || `Validation failed for ${error.path}`;
+        },
+      );
 
       return {
         status: HttpStatus.BAD_REQUEST,
         message: messages.length > 0 ? messages : ['Validation failed'],
         type: 'ValidationError',
         code: 'VALIDATION_ERROR',
-        details: process.env.NODE_ENV === 'development' ? exception.errors : undefined,
+        details:
+          process.env.NODE_ENV === 'development' ? exception.errors : undefined,
       };
     }
 
     // Cast Error (Invalid ObjectId, type conversion)
-    if (exception instanceof mongoose.Error.CastError || exception?.name === 'CastError') {
+    if (
+      exception instanceof mongoose.Error.CastError ||
+      exception?.name === 'CastError'
+    ) {
       const field = exception.path;
       const value = exception.value;
-      
+
       if (exception.kind === 'ObjectId') {
         return {
           status: HttpStatus.BAD_REQUEST,
@@ -287,7 +308,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // Document Not Found Error
-    if (exception instanceof mongoose.Error.DocumentNotFoundError || exception?.name === 'DocumentNotFoundError') {
+    if (
+      exception instanceof mongoose.Error.DocumentNotFoundError ||
+      exception?.name === 'DocumentNotFoundError'
+    ) {
       return {
         status: HttpStatus.NOT_FOUND,
         message: 'Document not found',
@@ -297,7 +321,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // Version Error (Optimistic concurrency)
-    if (exception instanceof mongoose.Error.VersionError || exception?.name === 'VersionError') {
+    if (
+      exception instanceof mongoose.Error.VersionError ||
+      exception?.name === 'VersionError'
+    ) {
       return {
         status: HttpStatus.CONFLICT,
         message: 'Document was modified by another process',
@@ -307,7 +334,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // Parallel Save Error
-    if (exception instanceof mongoose.Error.ParallelSaveError || exception?.name === 'ParallelSaveError') {
+    if (
+      exception instanceof mongoose.Error.ParallelSaveError ||
+      exception?.name === 'ParallelSaveError'
+    ) {
       return {
         status: HttpStatus.CONFLICT,
         message: 'Cannot save document multiple times in parallel',
@@ -317,7 +347,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // Strict Mode Error
-    if (exception instanceof mongoose.Error.StrictModeError || exception?.name === 'StrictModeError') {
+    if (
+      exception instanceof mongoose.Error.StrictModeError ||
+      exception?.name === 'StrictModeError'
+    ) {
       return {
         status: HttpStatus.BAD_REQUEST,
         message: `Field '${exception.path}' is not defined in schema`,
@@ -337,7 +370,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // Server Selection Error
-    if (exception?.name === 'MongooseServerSelectionError' || exception?.name === 'MongoServerSelectionError') {
+    if (
+      exception?.name === 'MongooseServerSelectionError' ||
+      exception?.name === 'MongoServerSelectionError'
+    ) {
       return {
         status: HttpStatus.SERVICE_UNAVAILABLE,
         message: 'Cannot connect to database server',
@@ -351,7 +387,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message: 'Database operation failed',
       type: 'MongooseError',
       code: 'DATABASE_ERROR',
-      details: process.env.NODE_ENV === 'development' ? exception.message : undefined,
+      details:
+        process.env.NODE_ENV === 'development' ? exception.message : undefined,
     };
   }
 
@@ -371,7 +408,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (this.isMongoDuplicateKeyError(exception)) {
       const keyValue = exception.keyValue || {};
       const duplicateFields = Object.keys(keyValue);
-      
+
       if (duplicateFields.length === 1) {
         const field = duplicateFields[0];
         const value = keyValue[field];
@@ -382,7 +419,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
           code: 'DUPLICATE_KEY',
         };
       }
-      
+
       return {
         status: HttpStatus.CONFLICT,
         message: 'Duplicate entry found',
@@ -444,14 +481,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
   private isAxiosError(exception: any): boolean {
     return (
       exception?.isAxiosError === true ||
-      (exception?.config && exception?.request && exception?.response !== undefined) ||
+      (exception?.config &&
+        exception?.request &&
+        exception?.response !== undefined) ||
       exception?.name === 'AxiosError'
     );
   }
 
   private handleAxiosError(exception: any) {
     const status = exception.response?.status || HttpStatus.BAD_GATEWAY;
-    const message = 
+    const message =
       (exception.response?.data as any)?.message ||
       exception.message ||
       'External service error';
@@ -466,11 +505,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   // Validation Error Handler
   private isValidationError(exception: any): boolean {
-    return exception?.name === 'ValidationError' && Array.isArray(exception.details);
+    return (
+      exception?.name === 'ValidationError' && Array.isArray(exception.details)
+    );
   }
 
   private handleValidationError(exception: any) {
-    const messages = exception.details?.map((detail: any) => detail.message) || ['Validation failed'];
+    const messages = exception.details?.map(
+      (detail: any) => detail.message,
+    ) || ['Validation failed'];
     return {
       status: HttpStatus.BAD_REQUEST,
       message: messages,
@@ -481,14 +524,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   // File System Error Handler
   private isFileSystemError(exception: any): boolean {
-    return exception?.code && ['ENOENT', 'EACCES', 'EMFILE', 'ENOTDIR'].includes(exception.code);
+    return (
+      exception?.code &&
+      ['ENOENT', 'EACCES', 'EMFILE', 'ENOTDIR'].includes(exception.code)
+    );
   }
 
   private handleFileSystemError(exception: any) {
     const errorMap: Record<string, { status: number; message: string }> = {
-      ENOENT: { status: HttpStatus.NOT_FOUND, message: 'File or directory not found' },
+      ENOENT: {
+        status: HttpStatus.NOT_FOUND,
+        message: 'File or directory not found',
+      },
       EACCES: { status: HttpStatus.FORBIDDEN, message: 'Permission denied' },
-      EMFILE: { status: HttpStatus.INTERNAL_SERVER_ERROR, message: 'Too many open files' },
+      EMFILE: {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Too many open files',
+      },
       ENOTDIR: { status: HttpStatus.BAD_REQUEST, message: 'Not a directory' },
     };
 
@@ -506,15 +558,29 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   // Network Error Handler
   private isNetworkError(exception: any): boolean {
-    return exception?.code && ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'].includes(exception.code);
+    return (
+      exception?.code &&
+      ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET'].includes(
+        exception.code,
+      )
+    );
   }
 
   private handleNetworkError(exception: any) {
     const errorMap: Record<string, { status: number; message: string }> = {
-      ECONNREFUSED: { status: HttpStatus.SERVICE_UNAVAILABLE, message: 'Connection refused' },
-      ETIMEDOUT: { status: HttpStatus.REQUEST_TIMEOUT, message: 'Connection timeout' },
+      ECONNREFUSED: {
+        status: HttpStatus.SERVICE_UNAVAILABLE,
+        message: 'Connection refused',
+      },
+      ETIMEDOUT: {
+        status: HttpStatus.REQUEST_TIMEOUT,
+        message: 'Connection timeout',
+      },
       ENOTFOUND: { status: HttpStatus.NOT_FOUND, message: 'Host not found' },
-      ECONNRESET: { status: HttpStatus.BAD_GATEWAY, message: 'Connection reset' },
+      ECONNRESET: {
+        status: HttpStatus.BAD_GATEWAY,
+        message: 'Connection reset',
+      },
     };
 
     const errorInfo = errorMap[exception.code] || {
@@ -531,8 +597,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   // Permission Error Handler
   private isPermissionError(exception: any): boolean {
-    return exception?.message?.toLowerCase().includes('permission') ||
-           exception?.code === 'EPERM';
+    return (
+      exception?.message?.toLowerCase().includes('permission') ||
+      exception?.code === 'EPERM'
+    );
   }
 
   private handlePermissionError(exception: any) {
@@ -546,8 +614,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   // Rate Limit Error Handler
   private isRateLimitError(exception: any): boolean {
-    return exception?.message?.toLowerCase().includes('rate limit') ||
-           exception?.status === 429;
+    return (
+      exception?.message?.toLowerCase().includes('rate limit') ||
+      exception?.status === 429
+    );
   }
 
   private handleRateLimitError(exception: any) {
@@ -562,10 +632,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
   // Native Error Handler
   private handleNativeError(exception: Error) {
     const errorTypeMap: Record<string, { status: number; message: string }> = {
-      TypeError: { status: HttpStatus.BAD_REQUEST, message: 'Type error occurred' },
-      ReferenceError: { status: HttpStatus.INTERNAL_SERVER_ERROR, message: 'Reference error occurred' },
-      SyntaxError: { status: HttpStatus.BAD_REQUEST, message: 'Syntax error in request' },
-      RangeError: { status: HttpStatus.BAD_REQUEST, message: 'Value out of range' },
+      TypeError: {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Type error occurred',
+      },
+      ReferenceError: {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Reference error occurred',
+      },
+      SyntaxError: {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Syntax error in request',
+      },
+      RangeError: {
+        status: HttpStatus.BAD_REQUEST,
+        message: 'Value out of range',
+      },
     };
 
     const errorInfo = errorTypeMap[exception.constructor.name] || {
@@ -577,7 +659,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ...errorInfo,
       type: exception.constructor.name,
       code: 'NATIVE_ERROR',
-      details: process.env.NODE_ENV === 'development' ? exception.stack : undefined,
+      details:
+        process.env.NODE_ENV === 'development' ? exception.stack : undefined,
     };
   }
 
@@ -621,16 +704,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private sanitizeRequestBody(body: any): any {
     if (!body || typeof body !== 'object') return body;
-    
-    const sensitiveFields = ['password', 'token', 'secret', 'key', 'auth', 'authorization'];
+
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'key',
+      'auth',
+      'authorization',
+    ];
     const sanitized = { ...body };
-    
-    Object.keys(sanitized).forEach(key => {
-      if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
+
+    Object.keys(sanitized).forEach((key) => {
+      if (sensitiveFields.some((field) => key.toLowerCase().includes(field))) {
         sanitized[key] = '[REDACTED]';
       }
     });
-    
+
     return sanitized;
   }
 }

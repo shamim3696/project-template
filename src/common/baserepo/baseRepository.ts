@@ -89,8 +89,6 @@ export class BaseRepository<T> {
   ): Promise<T[] | null | any> {
     return this.model
       .find({ ...data, isDeleted: false })
-      .select(projection || '-password') // if projection not given, exclude password
-      .lean()
       .exec();
   }
 
@@ -108,66 +106,13 @@ export class BaseRepository<T> {
       .exec();
   }
 
-  async getBusinessUser(data: any): Promise<T | null | any> {
-    return this.model
-      .find(data, { isDeleted: false })
-      .select({
-        password: 0,
-        kycDocumentBack: 0,
-        kycDocumentFront: 0,
-        kycDocumentId: 0,
-        kycDocumentType: 0,
-        createdAt: 0,
-        updatedAt: 0,
-        gender: 0,
-        birthday: 0,
-        address: 0,
-        country: 0,
-        currency: 0,
-        accStatus: 0,
-        kycStatus: 0,
-        twoFactorStatus: 0,
-        twoFactorSecret: 0,
-        name: 0,
-        __v: 0,
-        isDeleted: 0,
-        businesses: 0,
-      })
-      .lean()
-      .exec();
-  }
-
-  async findById(id: string): Promise<T | null | any> {
-    return this.model.findById(id).lean().exec();
-  }
-
   async findOne(
     data: Partial<T>,
     projection?: string | Record<string, number>,
   ): Promise<T | null | any> {
     const query = this.model.findOne({ ...data, isDeleted: false });
 
-    // Apply projection only if provided
-    if (projection) {
-      query.select(projection);
-    } else {
-      query.select('-password'); // default projection if none provided
-    }
-
     return query.lean().exec();
-  }
-
-  async findPassword(id: string): Promise<T | null | any> {
-    return this.model.findOne({ _id: id, isDeleted: false }).lean().exec();
-  }
-
-  async findLastOne(): Promise<T | null | any> {
-    return this.model
-      .findOne()
-      .select('-password')
-      .sort({ createdAt: -1 })
-      .lean()
-      .exec();
   }
 
   async create(data: any): Promise<T | any> {
